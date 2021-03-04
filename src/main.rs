@@ -1,4 +1,11 @@
-use virgin_media_prometheus_exporter::{app::Application, settings};
+mod app;
+mod client;
+mod collector;
+mod routes;
+mod settings;
+mod snmp;
+
+use app::Application;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
