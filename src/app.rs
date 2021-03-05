@@ -4,9 +4,16 @@ use crate::routes::{health_check, metrics};
 use crate::settings::Settings;
 
 use actix_web::dev::Server;
-use actix_web::{middleware, web, App, HttpServer};
+use actix_web::{
+    middleware,
+    web::{self, Data},
+    App, HttpServer,
+};
 use anyhow::Result;
+use prometheus::Registry;
 use std::net::TcpListener;
+
+const REGISTRY_PREFIX: &str = "virgin_media";
 
 pub struct Application {
     server: Server,
@@ -17,7 +24,10 @@ impl Application {
         let client = VirginHubClient::new(settings.hub_ip);
 
         let collector = Collector::new(client)?;
-        prometheus::register(Box::new(collector))?;
+        let registry = Registry::new_custom(Some(String::from(REGISTRY_PREFIX)), None)?;
+        registry.register(Box::new(collector))?;
+
+        let registry = Data::new(registry);
 
         let address = format!("0.0.0.0:{}", settings.port);
         let listener = TcpListener::bind(address)?;
@@ -27,6 +37,7 @@ impl Application {
                 .wrap(middleware::Compress::default())
                 .route("/health", web::get().to(health_check))
                 .route("/metrics", web::get().to(metrics))
+                .app_data(registry.clone())
         })
         .listen(listener)?
         .run();

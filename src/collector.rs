@@ -21,6 +21,7 @@ pub type UIntGaugeVec = GenericGaugeVec<AtomicU64>;
 pub struct Collector {
     client: VirginHubClient,
 
+    up: UIntGauge,
     status_metrics: StatusMetrics,
     downstream_metrics: DownstreamMetrics,
     upstream_metrics: UpstreamMetrics,
@@ -31,6 +32,8 @@ impl Collector {
     pub fn new(client: VirginHubClient) -> Result<Self> {
         Ok(Collector {
             client,
+
+            up: UIntGauge::new("up", "Whether the Virgin Media scrape was successful.")?,
 
             status_metrics: StatusMetrics::new()?,
             downstream_metrics: DownstreamMetrics::new()?,
@@ -43,6 +46,7 @@ impl Collector {
 impl prometheus::core::Collector for Collector {
     fn desc(&self) -> Vec<&Desc> {
         vec![
+            self.up.desc(),
             self.status_metrics.desc(),
             self.downstream_metrics.desc(),
             self.upstream_metrics.desc(),
@@ -59,6 +63,8 @@ impl prometheus::core::Collector for Collector {
             .get_router_status()
             .expect("failed to get router status");
 
+        self.up.set(1);
+
         self.status_metrics
             .set(&router_status)
             .expect("failed to collect status metrics");
@@ -73,6 +79,7 @@ impl prometheus::core::Collector for Collector {
             .expect("failed to collect configuration metrics");
 
         vec![
+            self.up.collect(),
             self.status_metrics.collect(),
             self.downstream_metrics.collect(),
             self.upstream_metrics.collect(),
