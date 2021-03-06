@@ -1,20 +1,22 @@
 use actix_web::{
     dev::Body,
     http::header::{ContentType, Header},
-    web::{self, Data},
+    web::Data,
     HttpResponse,
 };
 use prometheus::{Encoder, Registry, TextEncoder};
 
-#[tracing::instrument(skip(registry))]
-pub async fn metrics(registry: Data<Registry>) -> HttpResponse {
+pub async fn metrics(registry: Data<Registry>) -> Result<HttpResponse, HttpResponse> {
     let mut buffer = vec![];
     let encoder = TextEncoder::new();
 
-    let metrics = web::block(move || registry.gather()).await.unwrap();
-    encoder.encode(&metrics, &mut buffer).unwrap();
+    let metrics = registry.gather();
+    encoder.encode(&metrics, &mut buffer).map_err(|e| {
+        log::error!("failed to encode metrics: {:?}", e);
+        HttpResponse::InternalServerError()
+    })?;
 
-    HttpResponse::Ok()
-        .append_header((ContentType::name(), encoder.format_type()))
-        .body(Body::from(buffer))
+    Ok(HttpResponse::Ok()
+        .header(ContentType::name(), encoder.format_type())
+        .body(Body::from(buffer)))
 }

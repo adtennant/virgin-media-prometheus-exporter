@@ -10,16 +10,12 @@ path = "src/main.rs"
 name = "virgin-media-prometheus-exporter"
 
 [dependencies]
-actix-web = { version = "4.0.0-beta.3", default_features = false, features = ["compress"] }
+actix-web = { version = "3.3.2", default_features = false, features = ["compress"] }
 anyhow = "1.0.38"
 config = { version = "0.10.1", default_features = false, features = ["toml"] }
-futures = "0.3.13"
-prometheus = "0.11.0"
+env_logger = "0.8.3"
+log = "0.4.14"
+prometheus = "0.12.0"
 reqwest = { version = "0.11.1", default_features = false, features = ["blocking", "json"] }
-serde = { version = "1.0.123", default_features = false, features = ["derive"] }
+serde = { version = "1.0.124", default_features = false, features = ["derive"] }
 serde-aux = { version = "2.1.1", default_features = false }
-tracing = "0.1.25"
-tracing-actix-web = "0.3.0-beta.2"
-tracing-bunyan-formatter = "0.1.7"
-tracing-log = "0.1.2"
-tracing-subscriber = { version = "0.2.16", default_features = false, features = ["fmt", "registry", "env-filter"] }

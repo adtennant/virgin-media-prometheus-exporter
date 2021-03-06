@@ -1,7 +1,7 @@
 use super::UIntGaugeVec;
 use crate::snmp::{List, Table, TableEntry, OID};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use prometheus::{
     core::{Collector, Desc},
     proto::MetricFamily,
@@ -168,40 +168,46 @@ impl DownstreamMetrics {
         let signal_quality_table: Table<SignalQuality> =
             router_status.parse_table(&DOCS_IF_SIGNAL_QUALITY_TABLE)?;
 
-        for (key, downstream_channel_entry) in downstream_channel_table.iter() {
-            let signal_quality_ext_entry = signal_quality_ext_table.get(key).unwrap();
-            let signal_quality_entry = signal_quality_table.get(key).unwrap();
+        for (index, downstream_channel_entry) in downstream_channel_table.iter() {
+            let signal_quality_ext_entry = signal_quality_ext_table.get(index).context(format!(
+                "failed to find signal quality ext entry for index: {}",
+                index
+            ))?;
+            let signal_quality_entry = signal_quality_table.get(index).context(format!(
+                "failed to find signal quality entry for index: {}",
+                index
+            ))?;
 
             self.down_channel_id
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(downstream_channel_entry.down_channel_id);
 
             self.down_channel_frequency
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(downstream_channel_entry.down_channel_frequency);
 
             self.down_channel_modulation
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(downstream_channel_entry.down_channel_modulation as u64);
 
             self.down_channel_power
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(downstream_channel_entry.down_channel_power);
 
             self.down_channel_rx_mer
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(signal_quality_ext_entry.rx_mer);
 
             self.down_channel_correcteds
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(signal_quality_entry.correcteds);
 
             self.down_channel_uncorrectables
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(signal_quality_entry.uncorrectables);
 
             self.down_channel_signal_noise
-                .with_label_values(&[key])
+                .with_label_values(&[index])
                 .set(signal_quality_entry.signal_noise);
         }
 

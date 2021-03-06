@@ -1,7 +1,7 @@
 use super::UIntGaugeVec;
 use crate::snmp::{List, Table, TableEntry, OID};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use prometheus::{
     core::{Collector, Desc},
     proto::MetricFamily,
@@ -197,8 +197,15 @@ impl UpstreamMetrics {
             router_status.parse_table(&DOCS_IF3_CM_STATUS_US_TABLE)?;
 
         for (index, upstream_channel_entry) in upstream_channel_table.iter() {
-            let upstream_channel_ext_entry = upstream_channel_ext_table.get(index).unwrap();
-            let upstream_cm_status_entry = upstream_cm_status_table.get(index).unwrap();
+            let upstream_channel_ext_entry =
+                upstream_channel_ext_table.get(index).context(format!(
+                    "failed to find upstream channel ext entry for index: {}",
+                    index
+                ))?;
+            let upstream_cm_status_entry = upstream_cm_status_table.get(index).context(format!(
+                "failed to find upstream cm status entry for index: {}",
+                index
+            ))?;
 
             self.up_channel_id
                 .with_label_values(&[index])

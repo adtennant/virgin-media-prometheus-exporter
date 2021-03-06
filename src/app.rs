@@ -12,7 +12,6 @@ use actix_web::{
 use anyhow::Result;
 use prometheus::Registry;
 use std::net::TcpListener;
-use tracing_actix_web::TracingLogger;
 
 const REGISTRY_PREFIX: &str = "virgin_media";
 
@@ -36,7 +35,7 @@ impl Application {
         let server = HttpServer::new(move || {
             App::new()
                 .wrap(middleware::Compress::default())
-                .wrap(TracingLogger)
+                .wrap(middleware::Logger::default())
                 .route("/health", web::get().to(health_check))
                 .route("/metrics", web::get().to(metrics))
                 .app_data(registry.clone())

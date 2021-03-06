@@ -1,7 +1,7 @@
 use crate::snmp::List;
 
 use anyhow::Result;
-use reqwest::Client;
+use reqwest::blocking::Client;
 use std::net::IpAddr;
 
 pub struct VirginHubClient {
@@ -17,12 +17,12 @@ impl VirginHubClient {
         }
     }
 
-    pub async fn get_router_status(&self) -> Result<List> {
+    pub fn get_router_status(&self) -> Result<List> {
         let url = format!("http://{}/getRouterStatus", self.hub_ip);
 
-        let response = self.client.get(&url).send().await?;
+        let response = self.client.get(&url).send()?;
 
-        let router_status: List = response.json().await?;
+        let router_status: List = response.json()?;
         Ok(router_status)
     }
 }

@@ -41,6 +41,17 @@ impl Collector {
             configuration_metrics: ConfigurationMetrics::new()?,
         })
     }
+
+    fn update(&self) -> Result<()> {
+        let router_status = self.client.get_router_status()?;
+
+        self.status_metrics.set(&router_status)?;
+        self.downstream_metrics.set(&router_status)?;
+        self.upstream_metrics.set(&router_status)?;
+        self.configuration_metrics.set(&router_status)?;
+
+        Ok(())
+    }
 }
 
 impl prometheus::core::Collector for Collector {
@@ -58,38 +69,24 @@ impl prometheus::core::Collector for Collector {
     }
 
     fn collect(&self) -> Vec<MetricFamily> {
-        let scrape_result = futures::executor::block_on(self.client.get_router_status()).and_then(
-            |router_status| {
-                self.status_metrics
-                    .set(&router_status)
-                    .and(self.downstream_metrics.set(&router_status))
-                    .and(self.upstream_metrics.set(&router_status))
-                    .and(self.configuration_metrics.set(&router_status))
-            },
-        );
+        if let Err(e) = self.update() {
+            log::error!("error updating metrics: {:?}", e);
 
-        match scrape_result {
-            Ok(_) => {
-                self.up.set(1);
-
-                vec![
-                    self.up.collect(),
-                    self.status_metrics.collect(),
-                    self.downstream_metrics.collect(),
-                    self.upstream_metrics.collect(),
-                    self.configuration_metrics.collect(),
-                ]
-                .into_iter()
-                .flatten()
-                .collect()
-            }
-            Err(err) => {
-                self.up.set(0);
-
-                tracing::error!("error getting router status: {}", err);
-
-                self.up.collect()
-            }
+            self.up.set(0);
+            return self.up.collect();
         }
+
+        self.up.set(1);
+
+        vec![
+            self.up.collect(),
+            self.status_metrics.collect(),
+            self.downstream_metrics.collect(),
+            self.upstream_metrics.collect(),
+            self.configuration_metrics.collect(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
     }
 }
